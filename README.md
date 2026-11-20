@@ -1,76 +1,75 @@
-# Moto Logbook API 🏍️
+# Moto Logbook API
 
-REST API para registrar y gestionar rutas en moto. Construida con Node.js, Express y SQLite.
+[![Pruebas](https://github.com/eliasgdev/moto-logbook-api/actions/workflows/pruebas.yml/badge.svg)](https://github.com/eliasgdev/moto-logbook-api/actions/workflows/pruebas.yml)
 
-## Descripción
+API REST para llevar la bitácora de tus rutas en moto: destino, distancia, duración, clima y notas, con un resumen de kilómetros y horas rodadas.
 
-Backend completo con operaciones CRUD para llevar un historial de rutas — destino, distancia, duración, clima y notas. Cada ruta se guarda con fecha automática.
+Usa Node.js, Express 5 y SQLite a través de `node:sqlite`, que viene incluido en Node, así que no hay dependencias nativas que compilar.
 
-## Tecnologías
+## Correrla
 
-- Node.js
-- Express
-- SQLite (better-sqlite3)
+```bash
+git clone https://github.com/eliasgdev/moto-logbook-api.git
+cd moto-logbook-api
+npm install
+npm start            # http://localhost:3000
+npm test             # 8 pruebas de integración con una base en memoria
+```
+
+Requiere Node 22.13 o superior.
+
+| Variable | Por defecto | Para qué |
+|---|---|---|
+| `PORT` | `3000` | Puerto HTTP |
+| `DB_PATH` | `logbook.db` | Archivo de SQLite |
 
 ## Endpoints
 
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| GET | `/api/rutas` | Obtener todas las rutas |
-| GET | `/api/rutas/:id` | Obtener una ruta por ID |
-| POST | `/api/rutas` | Crear una ruta nueva |
-| PUT | `/api/rutas/:id` | Actualizar una ruta |
-| DELETE | `/api/rutas/:id` | Eliminar una ruta |
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/api/rutas?pagina=1&limite=20` | Lista paginada, de la más reciente a la más antigua (máximo 100 por página) |
+| `GET` | `/api/rutas/resumen` | Total de rutas, kilómetros y horas |
+| `GET` | `/api/rutas/:id` | Una ruta |
+| `POST` | `/api/rutas` | Crea una ruta (`201` con encabezado `Location`) |
+| `PATCH` | `/api/rutas/:id` | Cambia solo los campos enviados |
+| `DELETE` | `/api/rutas/:id` | Borra (`204`) |
 
-## Ejemplo de uso
+```bash
+curl -X POST http://localhost:3000/api/rutas \
+  -H 'Content-Type: application/json' \
+  -d '{"destino":"Villa de Leyva","distancia_km":165.5,"duracion_min":210,"clima":"soleado"}'
+```
 
-**Crear una ruta (POST)**
+### Campos
+
+| Campo | Tipo | Reglas |
+|---|---|---|
+| `destino` | texto | obligatorio, 1–120 caracteres |
+| `distancia_km` | número | obligatorio, 0,1–5000 |
+| `duracion_min` | entero | obligatorio, 1–4320 |
+| `clima` | texto | `soleado`, `nublado`, `lluvia`, `tormenta`, `niebla` o `viento` |
+| `notas` | texto | hasta 1000 caracteres |
+| `fecha` | `AAAA-MM-DD` | por defecto, hoy |
+
+Si algo no cumple, la respuesta dice qué campo falló:
+
 ```json
-{
-  "destino": "Zipaquirá",
-  "distancia_km": 50,
-  "duracion_min": 80,
-  "clima": "despejado",
-  "notas": "Buena vía, poco tráfico"
-}
+{ "error": "Datos inválidos.", "campos": { "distancia_km": "Debe estar entre 0.1 y 5000." } }
 ```
 
-**Respuesta**
-```json
-{
-  "id": 1,
-  "mensaje": "Ruta registrada"
-}
+Los mismos límites están en la API y en restricciones `CHECK` de la base, así que ningún camino guarda datos inválidos. Los campos desconocidos se rechazan, el JSON mal formado devuelve `400` y nunca `500`, y el cuerpo tiene un máximo de 10 KB.
+
+## Estructura
+
+```
+src/
+├── servidor.js    # arranque
+├── app.js         # rutas HTTP (crearApp(db) facilita las pruebas)
+├── base.js        # esquema SQLite con restricciones
+└── validar.js     # reglas de cada campo
+tests/api.test.js
 ```
 
-## Cómo correrlo
+## Licencia
 
-1. Cloná el repositorio
-```bash
-   git clone https://github.com/eliasgdev/moto-logbook-api.git
-```
-2. Instalá las dependencias
-```bash
-   npm install
-```
-3. Corré el servidor
-```bash
-   node app.js
-```
-4. El servidor corre en `http://localhost:3000`
-
-## Estructura del proyecto
-```
-moto-logbook-api/
-├── db/
-│   └── database.js
-├── routes/
-│   └── rutas.js
-├── controllers/
-│   └── rutasController.js
-└── app.js
-```
-
-## Autor
-
-**Elias Gutierrez** — [github.com/eliasgdev](https://github.com/eliasgdev)
+MIT
